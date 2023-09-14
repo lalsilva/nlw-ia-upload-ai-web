@@ -14,15 +14,29 @@ interface Prompt {
   template: string;
 }
 
-export function PromptSelect() {
+interface PromptSelectProps {
+  onPromptSelect: (template: string) => void;
+}
+
+export function PromptSelect(props: PromptSelectProps) {
   const [prompts, setPrompts] = useState<Prompt[] | null>(null);
+
+  function handlePromptSelected(promptId: string) {
+    const selectedPrompt = prompts?.find((prompt) => prompt.id === promptId);
+
+    if (!selectedPrompt) {
+      return;
+    }
+
+    props.onPromptSelect(selectedPrompt.template);
+  }
 
   useEffect(() => {
     api.get("/prompts").then((response) => setPrompts(response.data));
   }, []);
 
   return (
-    <Select>
+    <Select onValueChange={handlePromptSelected}>
       <SelectTrigger>
         <SelectValue placeholder="Selecione um prompt..." />
       </SelectTrigger>
