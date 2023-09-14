@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import { getFFmpeg } from "@/lib/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
+import { api } from "@/lib/axios";
 
 export function VideoInputForm() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -31,24 +32,24 @@ export function VideoInputForm() {
 
     await ffmpeg.writeFile("input.mp4", await fetchFile(video));
 
-    ffmpeg.on("log", (log) => {
-      console.log(log);
-    });
-
-    // ffmpeg.on("progress", (progress) => {
-    //   console.log(`Convert progress: ${Math.round(progress.progress * 100)}%`);
+    // ffmpeg.on("log", (log) => {
+    //   console.log(log);
     // });
 
+    ffmpeg.on("progress", (progress) => {
+      console.log(`Convert progress: ${Math.round(progress.progress * 100)}%`);
+    });
+
     await ffmpeg.exec([
-      '-i',
-      'input.mp4',
-      '-map',
-      '0:a',
-      '-b:a',
-      '20k',
-      '-acodec',
-      'libmp3lame',
-      'output.mp3',
+      "-i",
+      "input.mp4",
+      "-map",
+      "0:a",
+      "-b:a",
+      "20k",
+      "-acodec",
+      "libmp3lame",
+      "output.mp3",
     ]);
 
     const data = await ffmpeg.readFile("output.mp3");
@@ -75,8 +76,17 @@ export function VideoInputForm() {
     // Converte o vídeo em áudio
     // Isso é feito por causa da API da OpenAI, ela suporta apenas 25mb
     const audioFile = await convertVideoToAudio(videoFile);
+    const data = new FormData();
+    data.append("file", audioFile);
 
-    console.log(audioFile);
+    const response = await api.post("/videos", data);
+    const videoId = response.data.video.id;
+
+    await api.post(`/videos/${videoId}/transcription`, {
+      prompt,
+    });
+
+    console.log("Finished.");
   }
 
   const previewURL = useMemo(() => {
